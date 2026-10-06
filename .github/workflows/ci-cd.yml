@@ -1,0 +1,62 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:        # кнопка ручного запуска во вкладке Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # ---------- CI: проверка кода ----------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Установка зависимостей
+        run: pip install -r requirements.txt
+
+      - name: Линтер (flake8)
+        run: flake8 .
+
+      - name: Тесты (pytest)
+        run: pytest -v
+
+  # ---------- CD: сборка и деплой ----------
+  deploy:
+    needs: test                                  # только если тесты прошли
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Сборка сайта
+        run: python -m app.build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Деплой на GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
