@@ -30,8 +30,15 @@ jobs:
       - name: Линтер (flake8)
         run: flake8 .
 
-      - name: Тесты (pytest)
-        run: pytest -v
+      - name: Тесты + покрытие (pytest-cov)
+        run: pytest -v --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=80
+
+      - name: Сохранить отчёт о покрытии
+        if: always()                     # сохранить даже если тесты упали
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov
 
   # ---------- CD: сборка и деплой ----------
   deploy:
